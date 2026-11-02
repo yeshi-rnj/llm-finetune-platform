@@ -1,54 +1,177 @@
 # LLM Fine-Tuning Platform
 
-A small multi-user web app: sign up → create projects → upload labeled CSV datasets → submit training jobs →
-browse a model registry → evaluate on a held-out split → run inference.
+A multi-user web application that allows users to create projects, upload labeled datasets, train machine learning models, evaluate model performance, manage trained models, and run predictions through a simple web interface.
 
-* **Backend** – Python 3.10+ standard-library HTTP server, SQLite (with SQL migrations), PyJWT, scikit-learn.
-* **Frontend** – dependency-free JavaScript SPA served by the backend (strict CSP, no build step).
-* **Training methods**
-  * `tfidf-logreg` – TF-IDF + logistic regression. Runs on CPU anywhere. **Tested.**
-  * `lora-causal-lm` – LoRA fine-tuning of a Hugging Face sequence-classification model with PEFT.
-    Needs `torch`, `transformers`, `peft` (`backend/requirements-lora.txt`) and, realistically, a GPU.
-    **Not tested end-to-end** (see "Verification status").
+🌐 **Live Demo:** https://llm-finetune-platform.onrender.com
 
-## Dataset format
-CSV, UTF-8, header row with `text` and `label` columns, ≥10 rows, ≥2 labels, ≥2 rows per label.
+## 🚀 Features
 
-## Run locally (Windows PowerShell)
+- **User Authentication** – Sign up and log in securely.
+- **Project Management** – Create and manage multiple ML projects.
+- **Dataset Upload** – Upload labeled CSV datasets.
+- **Model Training** – Train models using supported training methods.
+- **Model Registry** – Browse and manage trained models.
+- **Model Evaluation** – Evaluate models on a held-out dataset split.
+- **Inference** – Run predictions using trained models.
+
+## 🛠️ Tech Stack
+
+| Component | Technologies |
+|---|---|
+| Backend | Python 3.10+, Standard Library HTTP Server |
+| Frontend | HTML, CSS, JavaScript |
+| Database | SQLite |
+| Machine Learning | Scikit-learn |
+| Authentication | PyJWT |
+| Deployment | Docker, Render |
+
+## 🧠 Training Methods
+
+### 1. TF-IDF + Logistic Regression (`tfidf-logreg`)
+- Converts text into numerical features using TF-IDF.
+- Uses Logistic Regression for classification.
+- Runs on CPU.
+- Tested successfully.
+
+### 2. LoRA Fine-Tuning (`lora-causal-lm`)
+- Uses Hugging Face Transformers and PEFT.
+- Supports LoRA-based fine-tuning.
+- Requires additional dependencies such as PyTorch, Transformers, and PEFT.
+- Realistically requires GPU resources.
+- Not tested end-to-end.
+
+## 📂 Dataset Format
+
+Upload a CSV file with the following structure:
+
+| text | label |
+|---|---|
+| This product is excellent | positive |
+| Very disappointing experience | negative |
+| I really liked this product | positive |
+| The service was terrible | negative |
+
+**Dataset requirements:**
+- CSV format with UTF-8 encoding.
+- Header row must contain `text` and `label`.
+- Minimum 10 rows.
+- At least 2 different labels.
+- At least 2 rows per label.
+
+## 💻 Run Locally
+
+### Prerequisites
+- Python 3.10 or later
+- Git
+- Windows PowerShell
+
+### Setup
+
 ```powershell
+git clone https://github.com/yeshi-rnj/llm-finetune-platform.git
 cd llm-finetune-platform
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass   # only for this PowerShell window
-.\scripts\setup.ps1      # venv, deps, .env with a generated JWT_SECRET, DB migrations
-.\scripts\run.ps1        # http://127.0.0.1:8000
-.\scripts\test.ps1       # backend tests + secret scan + frontend syntax check
+
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+.\scripts\setup.ps1
+.\scripts\run.ps1
 ```
 
-## Configuration (environment variables / `.env`)
-| Variable | Default | Notes |
+Open the application:
+
+```text
+http://127.0.0.1:8000
+```
+
+Run tests:
+
+```powershell
+.\scripts\test.ps1
+```
+
+## ☁️ Deployment
+
+The application is deployed using **Docker on Render**.
+
+**Live Application:** https://llm-finetune-platform.onrender.com
+
+### Deployment Configuration
+
+- Platform: Render
+- Deployment method: Docker
+- Dockerfile: `Dockerfile`
+- Build context: Repository root (`.`)
+- Application port: `10000`
+- Runtime environment: Production
+
+### Environment Variables
+
+Configure the following variables in your Render service:
+
+| Variable | Description |
+|---|---|
+| `APP_ENV` | Set to `production` |
+| `JWT_SECRET` | Secure secret of at least 32 characters |
+| `DATA_DIR` | Application data directory, configured as `/data` |
+| `HOST` | `0.0.0.0` |
+| `PORT` | `10000` |
+
+**Important:** Never commit your `.env` file or expose your JWT secret in a public repository.
+
+### Persistent Storage
+
+The application uses SQLite and local storage for datasets and model artifacts.
+
+For production use, configure a Render persistent disk mounted at:
+
+```text
+/data
+```
+
+Without persistent storage, application data may be lost when the service restarts or is redeployed.
+
+### Free Instance Note
+
+The Render free instance may spin down after inactivity. The first request after inactivity can take around 50 seconds or longer.
+
+## ⚙️ Configuration
+
+| Variable | Default | Description |
 |---|---|---|
-| `APP_ENV` | `development` | `production` makes `JWT_SECRET` mandatory (≥32 chars) |
-| `JWT_SECRET` | dev-only value | **required in production** |
-| `DATA_DIR` | `./data` | SQLite DB, datasets, model artifacts |
-| `HOST` / `PORT` | `127.0.0.1` / `8000` | |
-| `CORS_ORIGINS` | empty | comma-separated; only needed if the UI is on another origin |
-| `API_BASE_URL` | empty | only if the UI is on another origin than the API |
-| `MAX_UPLOAD_BYTES` | 10 MiB | |
+| `APP_ENV` | `development` | Application environment |
+| `JWT_SECRET` | Development-only value | Authentication secret |
+| `DATA_DIR` | `./data` | Database and artifact storage |
+| `HOST` | `127.0.0.1` | Server bind address |
+| `PORT` | `8000` | Server port |
+| `CORS_ORIGINS` | Empty | Allowed cross-origin origins |
+| `API_BASE_URL` | Empty | API URL for separate frontend hosting |
+| `MAX_UPLOAD_BYTES` | 10 MiB | Maximum upload size |
 
-## Deploy
-Single container, one instance, one persistent volume (SQLite + job queue are in-process):
-```bash
-cp .env.example .env     # set JWT_SECRET (python -c "import secrets; print(secrets.token_urlsafe(48))")
-docker compose up -d --build
-```
-Compose forces `APP_ENV=production` and refuses to start unless `JWT_SECRET` (>= 32 chars) is set in `.env`.
-The port is published on `127.0.0.1` only; put a TLS-terminating reverse proxy (Caddy, nginx, a cloud load balancer) in
-front – the app speaks plain HTTP – or set `BIND_ADDR=0.0.0.0` in `.env` to expose it directly (not recommended without TLS).
-The image installs exact versions from `backend/requirements.lock`; re-test before bumping them, because saved models are
-pickles tied to the scikit-learn version. Back up the `appdata` volume.
-For GPU/LoRA: set `INSTALL_LORA=1` in `.env` and build on a CUDA base image. Hugging Face downloads are cached in `/data/hf`.
+## ⚠️ Known Limitations
 
-## Known limitations
-* One server process / one training worker; jobs queued or running at restart are marked failed (no resume).
-* No login rate-limiting, e-mail verification, password reset or token revocation.
-* SQLite + local disk: not horizontally scalable. Move to Postgres + object storage + a real queue for that.
-* Model artifacts (`.joblib`) are pickles written and read only by the server; never import artifacts from untrusted sources.
+- One server process and one training worker.
+- Jobs queued or running during a restart are marked as failed; they cannot resume automatically.
+- No login rate limiting.
+- No email verification or password reset.
+- SQLite and local disk storage are not horizontally scalable.
+- LoRA training has not been tested end-to-end.
+- Model artifacts are stored as `.joblib` pickles and must only be loaded by the trusted server.
+
+## 🔮 Future Improvements
+
+- PostgreSQL database integration.
+- Cloud-based object storage for datasets and models.
+- Background job processing with a dedicated queue.
+- GPU-enabled model fine-tuning.
+- Improved authentication and security.
+- Training progress monitoring and visualization.
+
+## 👩‍💻 Author
+
+**Yeshashvi Ranjan**
+
+GitHub: https://github.com/yeshi-rnj
+
+---
+
+⭐ If you find this project interesting, consider giving the repository a star!
