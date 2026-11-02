@@ -1,0 +1,4 @@
+# Optional: only needed for the lora-causal-lm method. Install the CUDA build of torch for GPU training.
+torch
+transformers
+peft

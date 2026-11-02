@@ -1,0 +1,22 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        INSTALL_LORA: ${INSTALL_LORA:-0}
+    ports:
+      # Localhost only by default (put a TLS reverse proxy in front). Set BIND_ADDR=0.0.0.0 to expose directly.
+      - "${BIND_ADDR:-127.0.0.1}:8000:8000"
+    env_file: .env
+    environment:
+      # These win over env_file, so a copied .env.example cannot switch the container to development mode.
+      APP_ENV: production
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env (>= 32 chars)}
+      DATA_DIR: /data
+      HOST: 0.0.0.0
+      PORT: "8000"
+    volumes:
+      - appdata:/data        # SQLite DB, datasets and model artifacts live here
+    restart: unless-stopped
+volumes:
+  appdata:

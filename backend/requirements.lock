@@ -1,0 +1,7 @@
+# Exact versions used by the Docker image (tested on Python 3.12). Local dev uses requirements.txt (ranges).
+PyJWT==2.7.0
+scikit-learn==1.8.0
+numpy==2.4.4
+scipy==1.17.1
+joblib==1.5.3
+threadpoolctl==3.6.0
